@@ -12,3 +12,13 @@ const Header = ({ title, actions }) => {
 };
 
 export default Header;
+
+
+
+
+
+
+
+
+
+
