@@ -1,0 +1,274 @@
+.dashboard-container {
+  padding: 2rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #111827;
+  animation: fadeIn 0.5s ease-in-out;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-header {
+  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.dashboard-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #e5e7eb;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+}
+
+.stat-card.restaurant::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+.stat-card.metro::before { background: linear-gradient(90deg, #10b981, #059669); }
+.stat-card.gst::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.stat-card.total::before { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.stat-card.restaurant .stat-icon { background: #eff6ff; color: #3b82f6; }
+.stat-card.metro .stat-icon { background: #ecfdf5; color: #10b981; }
+.stat-card.gst .stat-icon { background: #fffbeb; color: #f59e0b; }
+.stat-card.total .stat-icon { background: #f5f3ff; color: #8b5cf6; }
+
+.stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.stat-subtext {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.trend-up {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.dashboard-sections {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.panel-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.action-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+}
+
+.action-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateX(4px);
+}
+
+.action-icon {
+  margin-right: 0.75rem;
+  font-size: 1.25rem;
+}
+
+.action-text {
+  flex: 1;
+}
+
+.arrow-icon {
+  color: #9ca3af;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f4f6;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.recent-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.recent-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.recent-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.recent-badge.restaurant { background: #eff6ff; color: #3b82f6; }
+.recent-badge.metro { background: #ecfdf5; color: #10b981; }
+.recent-badge.gst { background: #fffbeb; color: #f59e0b; }
+
+.recent-title {
+  font-weight: 500;
+  color: #111827;
+}
+
+.recent-date {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.recent-amount {
+  font-weight: 600;
+  color: #111827;
+}
