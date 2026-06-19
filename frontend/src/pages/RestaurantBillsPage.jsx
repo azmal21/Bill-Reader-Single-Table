@@ -11,6 +11,7 @@ const RestaurantBillsPage = ({ bills, billsLoading, billsError, handleDelete, op
       handleDelete={handleDelete} 
       onImportClick={openUploadModal} 
       totalBills={bills.length}
+      billType="restaurant"
     />
   );
 };

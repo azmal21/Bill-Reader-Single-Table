@@ -9,12 +9,12 @@ const formatDateTime = (dateStr) => {
   });
 };
 
-const BillSummaryCards = ({ bill, items, sgst, cgst, grandTotal }) => {
+const BillSummaryCards = ({ bill, items, sgst, cgst, totalTax, grandTotal, entityLabel = "Restaurant", entityName }) => {
   return (
     <div className="detail-summary">
       <div className="summary-card">
-        <span className="summary-card-label">Restaurant</span>
-        <span className="summary-card-value">{bill.restaurant_name || '—'}</span>
+        <span className="summary-card-label">{entityLabel}</span>
+        <span className="summary-card-value">{entityName || bill.restaurant_name || '—'}</span>
       </div>
       <div className="summary-card">
         <span className="summary-card-label">Date</span>
@@ -24,6 +24,24 @@ const BillSummaryCards = ({ bill, items, sgst, cgst, grandTotal }) => {
         <span className="summary-card-label">Total Items</span>
         <span className="summary-card-value">{items.length}</span>
       </div>
+      {sgst !== undefined && sgst > 0 && (
+        <div className="summary-card">
+          <span className="summary-card-label">SGST</span>
+          <span className="summary-card-value">₹{sgst.toFixed(2)}</span>
+        </div>
+      )}
+      {cgst !== undefined && cgst > 0 && (
+        <div className="summary-card">
+          <span className="summary-card-label">CGST</span>
+          <span className="summary-card-value">₹{cgst.toFixed(2)}</span>
+        </div>
+      )}
+      {totalTax !== undefined && (sgst === undefined || cgst === undefined) && totalTax > 0 && (
+        <div className="summary-card">
+          <span className="summary-card-label">Total Tax</span>
+          <span className="summary-card-value">₹{totalTax.toFixed(2)}</span>
+        </div>
+      )}
       <div className="summary-card summary-card-highlight">
         <span className="summary-card-label">Grand Total</span>
         <span className="summary-card-value">₹{grandTotal.toFixed(2)}</span>

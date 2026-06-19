@@ -12,6 +12,7 @@ const MetroInvoicesPage = ({ bills, billsLoading, billsError, handleDelete, open
       onImportClick={openUploadModal} 
       totalBills={bills.length}
       detailRoutePrefix="/metro/single"
+      billType="metro"
     />
   );
 };

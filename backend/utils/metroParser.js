@@ -207,20 +207,20 @@ function parseMetroInvoice(rawOcrText) {
 
     const articleCode = tokens[artIdx];
     const articleName = tokens.slice(artIdx + 1, nameEndIdx)
-                              .join(" ")
-                              .replace(/^[xX\-\~]+|[xX\-\~]+$/g, '')
-                              .trim();
+      .join(" ")
+      .replace(/^[xX\-\~]+|[xX\-\~]+$/g, '')
+      .trim();
 
     let hsnCode = null;
     if (hsnIdx !== -1) {
       hsnCode = tokens[hsnIdx];
     } else {
-       for(let i = nameEndIdx; i < tokens.length; i++) {
-          if (/^\d{4,10}$/.test(tokens[i]) && !tokens[i].includes('.')) {
-              hsnCode = tokens[i];
-              break;
-          }
-       }
+      for (let i = nameEndIdx; i < tokens.length; i++) {
+        if (/^\d{4,10}$/.test(tokens[i]) && !tokens[i].includes('.')) {
+          hsnCode = tokens[i];
+          break;
+        }
+      }
     }
 
     const remainingTokens = tokens.slice(nameEndIdx);
@@ -274,10 +274,20 @@ function parseMetroInvoice(rawOcrText) {
       validation_status: item.validationStatus,
 
       // Legacy compatibility
+      articleCode: item.articleCode,
+      articleName: item.articleName,
+      hsnCode: item.hsnCode,
       qty: item.qty,
-      net_discount_amount: item.netDiscAmount,
-      tax_percentage: item.taxPercent,
-      total_amount_including_gst: item.totalAmountIncludingGST
+      packSize: item.packSize,
+      netAmount: item.netAmount,
+      discountAmount: item.discountAmount,
+      netDiscountAmount: item.netDiscAmount,
+      taxPercent: item.taxPercent,
+      taxAmount: item.taxAmount,
+      totalAmountIncludingGST: item.totalAmountIncludingGST,
+      validationStatus: item.validationStatus,
+      validationMessages: item.validationMessages,
+      status: item.status
     });
   };
 

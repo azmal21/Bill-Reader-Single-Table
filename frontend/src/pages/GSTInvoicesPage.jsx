@@ -11,6 +11,7 @@ const GSTInvoicesPage = ({ bills, billsLoading, billsError, handleDelete, openUp
       handleDelete={handleDelete} 
       onImportClick={openUploadModal} 
       totalBills={bills.length}
+      billType="gst"
     />
   );
 };

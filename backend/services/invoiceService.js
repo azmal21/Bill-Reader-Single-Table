@@ -176,18 +176,7 @@ async function saveInvoiceToDB(rawInvoice, rawItems) {
     // 2. Insert Invoice Items
     const savedItems = [];
     for (const item of items) {
-      const isQtyDecimal = !Number.isInteger(Number(item.quantity));
-      const isHsnMissing = !item.hsn_code || String(item.hsn_code).trim() === '';
-      const isTotalMissing = !item.total_amount || Number(item.total_amount) === 0;
 
-      if (isQtyDecimal || isHsnMissing || isTotalMissing || item.status === 'needs_review') {
-        console.warn(`⚠️ Skipped saving item ${item.article_name} to DB (status: needs_review)`);
-        savedItems.push({
-          ...item,
-          status: 'needs_review'
-        });
-        continue;
-      }
 
       const itemQuery = `
         INSERT INTO invoice_items (

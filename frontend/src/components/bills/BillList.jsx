@@ -4,7 +4,7 @@ import BillTable from './BillTable';
 import Pagination from '../common/Pagination';
 import EmptyState from '../common/EmptyState';
 
-const BillList = ({ title, bills, billsLoading, billsError, handleDelete, onImportClick, totalBills, detailRoutePrefix = "/single" }) => {
+const BillList = ({ title, bills, billsLoading, billsError, handleDelete, onImportClick, totalBills, detailRoutePrefix = "/single", billType = "restaurant" }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('newest');
   const [pageSize, setPageSize] = useState(50);
@@ -64,7 +64,7 @@ const BillList = ({ title, bills, billsLoading, billsError, handleDelete, onImpo
           <EmptyState message={<span>No bills found. Click <strong>+ Add</strong> to upload your first bill.</span>} />
         ) : (
           <>
-            <BillTable bills={filteredBills} handleDelete={handleDelete} detailRoutePrefix={detailRoutePrefix} />
+            <BillTable bills={filteredBills} handleDelete={handleDelete} detailRoutePrefix={detailRoutePrefix} billType={billType} />
             <Pagination currentLength={filteredBills.length} totalLength={totalBills || bills.length} />
           </>
         )}

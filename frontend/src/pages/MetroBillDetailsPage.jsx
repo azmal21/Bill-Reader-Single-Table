@@ -50,11 +50,12 @@ const MetroBillDetailsPage = ({ handleDelete }) => {
       </header>
 
       <BillSummaryCards
-        bill={{ ...bill, restaurant_name: bill.vendor_name || bill.supplier_name, created_at: bill.invoice_date || bill.created_at }}
+        bill={{ ...bill, created_at: bill.invoice_date || bill.created_at }}
         items={items}
-        sgst={totalTax / 2}
-        cgst={totalTax / 2}
+        totalTax={totalTax}
         grandTotal={grandTotal}
+        entityLabel="Supplier / Vendor"
+        entityName={bill.vendor_name || bill.supplier_name}
       />
 
       <div className="table-container">
