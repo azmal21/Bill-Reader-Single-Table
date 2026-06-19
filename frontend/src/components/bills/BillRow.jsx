@@ -24,7 +24,7 @@ const parseBillItems = (bill) => {
 };
 
 const BillRow = ({ bill, handleDelete, detailRoutePrefix = "/single", billType = "restaurant" }) => {
-  const itemCount = parseBillItems(bill).length;
+  const itemCount = bill.itemCount !== undefined ? bill.itemCount : parseBillItems(bill).length;
   return (
     <tr>
       <td className="col-checkbox">
@@ -73,13 +73,3 @@ const BillRow = ({ bill, handleDelete, detailRoutePrefix = "/single", billType =
 };
 
 export default BillRow;
-
-
-
-
-
-
-
-
-
-

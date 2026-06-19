@@ -21,7 +21,7 @@ const BillSummaryCards = ({ bill, items, sgst, cgst, totalTax, grandTotal, entit
         <span className="summary-card-value">{formatDateTime(bill.created_at)}</span>
       </div>
       <div className="summary-card">
-        <span className="summary-card-label">Total Items</span>
+        <span className="summary-card-label">Total Itemsss</span>
         <span className="summary-card-value">{items.length}</span>
       </div>
       {sgst !== undefined && sgst > 0 && (
