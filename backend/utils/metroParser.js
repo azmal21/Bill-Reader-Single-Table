@@ -37,54 +37,71 @@ function allocateColumns(numbers) {
   let minError = Infinity;
   const validTaxRates = [0, 5, 12, 18, 28];
 
-  function getCombinations(nums, slots) {
-    if (slots === 0) return nums.length === 0 ? [[]] : [];
-    if (nums.length === 0) return [[null, ...getCombinations([], slots - 1)[0]]];
+  function search(slotIdx, currentMap, usedIndices) {
+    if (slotIdx === 8) {
+      let [q, p, n, d, nd, tp, ta, tot] = currentMap;
+      let error = 0;
 
-    let res = [];
-    for (let c of getCombinations(nums.slice(1), slots - 1)) {
-      res.push([nums[0], ...c]);
+      if (n !== null && d !== null && nd !== null) {
+        error += Math.abs((n + d) - nd);
+      }
+      if (nd !== null && ta !== null && tot !== null) {
+        error += Math.abs((nd + ta) - tot);
+      }
+      if (nd !== null && tp !== null && ta !== null) {
+        error += Math.abs((nd * (tp / 100)) - ta);
+      }
+      // Penalize missing values
+      error += currentMap.filter(x => x === null).length * 10;
+
+      if (error < minError) {
+        minError = error;
+        bestMap = [...currentMap];
+      }
+      return;
     }
-    if (slots > nums.length) {
-      for (let c of getCombinations(nums, slots - 1)) {
-        res.push([null, ...c]);
+
+    // Try assigning null
+    currentMap[slotIdx] = null;
+    search(slotIdx + 1, currentMap, usedIndices);
+
+    // Try assigning each unused number
+    for (let i = 0; i < Math.min(15, numbers.length); i++) {
+      if (!usedIndices[i]) {
+        let val = numbers[i];
+
+        // Constraints for pruning
+        if (slotIdx === 0 && (!Number.isInteger(val) || val <= 0)) continue; // Qty
+        if (slotIdx === 1 && (!Number.isInteger(val) || val <= 0)) continue; // Pack
+        if (slotIdx === 3 && val > 0) continue; // Disc must be <= 0
+        if (slotIdx === 5 && !validTaxRates.includes(Math.round(val))) continue; // TaxPercent
+        if (slotIdx === 6 && val < 0) continue; // TaxAmount
+        if (slotIdx === 7 && val <= 0) continue; // TotalAmount
+
+        usedIndices[i] = true;
+        currentMap[slotIdx] = val;
+        search(slotIdx + 1, currentMap, usedIndices);
+        usedIndices[i] = false;
       }
     }
-    return res;
   }
 
-  const combos = getCombinations(numbers.slice(0, 8), 8);
+  search(0, new Array(8).fill(null), {});
 
-  for (let c of combos) {
-    let [q, p, n, d, nd, tp, ta, tot] = c;
-    let error = 0;
-
-    if (d !== null && d > 0) error += 10000;
-    if (tp !== null && !validTaxRates.includes(Math.round(tp))) error += 10000;
-    if (q !== null && q <= 0) error += 10000;
-    if (p !== null && p <= 0) error += 10000;
-    if (ta !== null && ta < 0) error += 10000;
-    if (tot !== null && tot < 0) error += 10000;
-
-    if (n !== null && d !== null && nd !== null) {
-      error += Math.abs((n + d) - nd);
-    }
-    if (nd !== null && ta !== null && tot !== null) {
-      error += Math.abs((nd + ta) - tot);
-    }
-    if (nd !== null && tp !== null && ta !== null) {
-      error += Math.abs((nd * (tp / 100)) - ta);
-    }
-
-    error -= c.filter(x => x !== null).length * 0.1;
-
-    if (error < minError) {
-      minError = error;
-      bestMap = { qty: q, packSize: p, netAmount: n, discountAmount: d, netDiscAmount: nd, taxPercent: tp, taxAmount: ta, totalAmount: tot };
-    }
+  if (bestMap) {
+    return {
+      qty: bestMap[0],
+      packSize: bestMap[1],
+      netAmount: bestMap[2],
+      discountAmount: bestMap[3],
+      netDiscAmount: bestMap[4],
+      taxPercent: bestMap[5],
+      taxAmount: bestMap[6],
+      totalAmount: bestMap[7]
+    };
   }
 
-  return bestMap || {
+  return {
     qty: numbers[0] ?? null,
     packSize: numbers[1] ?? null,
     netAmount: numbers[2] ?? null,
@@ -169,57 +186,52 @@ function parseMetroInvoice(rawOcrText) {
     let artIdx = tokens.findIndex(t => ARTICLE_CODE_RE.test(t));
     if (artIdx === -1) return;
 
-    let hsnIdx = tokens.findIndex((t, i) => i > artIdx && HSN_RE.test(t));
+    let hsnIdx = tokens.findIndex((t, i) => i > artIdx && HSN_RE.test(t) && t.length >= 4 && t.length <= 10 && !t.includes('.'));
 
-    // If HSN regex failed, search for the start of the numeric columns block
-    if (hsnIdx === -1) {
-      let numericBlockStart = -1;
-      for (let i = artIdx + 1; i < tokens.length - 2; i++) {
-        // If we find 3 pure numbers in a row, it's definitely the Qty / Price / Tax columns
-        if (isPureNumber(tokens[i]) && isPureNumber(tokens[i + 1]) && isPureNumber(tokens[i + 2])) {
-          numericBlockStart = i;
-          break;
-        }
+    let numericBlockStart = -1;
+    for (let i = artIdx + 1; i < tokens.length - 1; i++) {
+      if (isPureNumber(tokens[i]) && isPureNumber(tokens[i + 1])) {
+        numericBlockStart = i;
+        break;
       }
+    }
 
-      if (numericBlockStart !== -1) {
-        // Is the token right before the numeric block a garbled HSN?
-        // E.g., it has at least 3 digits and length 4-10
-        const prevToken = tokens[numericBlockStart - 1];
-        const digitCount = (prevToken.match(/\d/g) || []).length;
-        if (digitCount >= 3 && prevToken.length >= 4 && prevToken.length <= 10) {
-          hsnIdx = numericBlockStart - 1;
-        } else {
-          // The previous token is part of the name, so the numeric block starts with HSN (or HSN is entirely missing)
-          // We will just set hsnIdx to the numericBlockStart so articleName ends correctly
-          hsnIdx = numericBlockStart;
-        }
-      } else {
-        // Fallback
-        hsnIdx = tokens.length;
-      }
+    let nameEndIdx = tokens.length;
+    if (numericBlockStart !== -1 && hsnIdx !== -1) {
+      nameEndIdx = Math.min(numericBlockStart, hsnIdx);
+    } else if (numericBlockStart !== -1) {
+      nameEndIdx = numericBlockStart;
+    } else if (hsnIdx !== -1) {
+      nameEndIdx = hsnIdx;
     }
 
     const articleCode = tokens[artIdx];
-    const articleName = tokens.slice(artIdx + 1, hsnIdx).join(" ");
+    const articleName = tokens.slice(artIdx + 1, nameEndIdx)
+                              .join(" ")
+                              .replace(/^[xX\-\~]+|[xX\-\~]+$/g, '')
+                              .trim();
 
-    // Determine if the token at hsnIdx is actually an HSN code
     let hsnCode = null;
-    if (hsnIdx < tokens.length) {
-      const candidate = tokens[hsnIdx];
-      const digitCount = (candidate.match(/\d/g) || []).length;
-      if (digitCount >= 3 && candidate.length >= 4 && candidate.length <= 10 && !isPureNumber(candidate.replace(/[a-zA-Z]/g, ''))) {
-        hsnCode = candidate;
-      } else if (HSN_RE.test(candidate)) {
-        hsnCode = candidate;
-      } else if (candidate.length >= 4 && digitCount >= 4) {
-        hsnCode = candidate;
+    if (hsnIdx !== -1) {
+      hsnCode = tokens[hsnIdx];
+    } else {
+       for(let i = nameEndIdx; i < tokens.length; i++) {
+          if (/^\d{4,10}$/.test(tokens[i]) && !tokens[i].includes('.')) {
+              hsnCode = tokens[i];
+              break;
+          }
+       }
+    }
+
+    const remainingTokens = tokens.slice(nameEndIdx);
+    if (hsnCode) {
+      const hsnLocalIdx = remainingTokens.indexOf(hsnCode);
+      if (hsnLocalIdx !== -1) {
+        remainingTokens.splice(hsnLocalIdx, 1);
       }
     }
 
-    // If we didn't identify it as an HSN code, it's likely the first financial column (like Qty)
-    const afterHsn = hsnCode ? tokens.slice(hsnIdx + 1) : tokens.slice(hsnIdx);
-    const numbers = afterHsn.map(parseMonetary).filter(n => n !== null);
+    const numbers = remainingTokens.map(parseMonetary).filter(n => n !== null);
     const mapped = allocateColumns(numbers);
 
     let item = {
