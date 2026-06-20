@@ -113,6 +113,33 @@ function allocateColumns(numbers) {
   };
 }
 
+function cleanArticleName(name) {
+  if (!name) return name;
+  let cleaned = name;
+
+  // 1. Remove specific known prefix/suffix codes standalone (e.g., RS1011GPK10, PK50)
+  cleaned = cleaned.replace(/\b(PK|RS)\d+[A-Za-z0-9]*\b/gi, ' ');
+
+  // 2. Remove appended quantities and pack codes (e.g., 55G, 41.75GPK12, 60g, 3.6GPKS0, 22gPK12, 24N)
+  cleaned = cleaned.replace(/\d+(\.\d+)?(G|ML|L|KG|N|C|PK|PKS|RS)[A-Za-z0-9]*/gi, ' ');
+
+  // 3. Remove standalone numbers from the end repeatedly
+  while (/\s+\d+(\.\d+)?\s*$/.test(cleaned)) {
+    cleaned = cleaned.replace(/\s+\d+(\.\d+)?\s*$/, '');
+  }
+
+  // 4. Remove standalone 'Z' or 'z' at the end (common OCR noise)
+  cleaned = cleaned.replace(/\s+[zZ]\s*$/g, ' ');
+
+  // 5. Strip all leading/trailing non-alphanumeric characters (keeps spaces inside)
+  cleaned = cleaned.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, ' ');
+
+  // 6. Consolidate spaces
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
 function validateItem(item) {
   const messages = [];
   const validTaxRates = [0, 5, 12, 18, 28];
@@ -206,10 +233,8 @@ function parseMetroInvoice(rawOcrText) {
     }
 
     let articleCode = tokens[artIdx];
-    let articleName = tokens.slice(artIdx + 1, nameEndIdx)
-      .join(" ")
-      .replace(/^[xX\-\~]+|[xX\-\~]+$/g, '')
-      .trim();
+    let rawArticleName = tokens.slice(artIdx + 1, nameEndIdx).join(" ");
+    let articleName = cleanArticleName(rawArticleName);
 
     let hsnCode = null;
     
