@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { extractTextFromImage, uploadMetroInvoice, uploadGSTInvoice, saveMetroInvoice } from '../../services/api';
+import { uploadBill } from '../../services/api';
 import FileDropZone from './FileDropZone';
 import UploadProgress from './UploadProgress';
 
@@ -56,42 +56,22 @@ const UploadModal = ({ show, uploadType, onClose, onUploadSuccess }) => {
     setUploadProgress(0);
 
     try {
-      let data;
-      if (uploadType === 'metro') {
-        data = await uploadMetroInvoice(selectedFile, (percent) => setUploadProgress(percent));
-      } else if (uploadType === 'gst') {
-        data = await uploadGSTInvoice(selectedFile, (percent) => setUploadProgress(percent));
-      } else {
-        data = await extractTextFromImage(selectedFile, (percent) => setUploadProgress(percent));
-      }
+      const data = await uploadBill(selectedFile, (percent) => setUploadProgress(percent));
 
       if (data.success) {
-        console.log(`========== ${uploadType.toUpperCase()} RAW TESSERACT OCR TEXT ==========`);
-        console.log(data.rawText || data.tesseractText);
-        console.log("Item Count:", data.parsedData?.itemCount);
-        console.log(`========== ${uploadType.toUpperCase()} EXTRACTION JSON ==========`);
-        console.log(JSON.stringify(data.billData || data.parsedData, null, 2));
-
-        if (uploadType === 'metro') {
-          const saveRes = await saveMetroInvoice(data.parsedData);
-          if (saveRes.success) {
-            onUploadSuccess({ saved: true, type: 'metro', id: saveRes.invoice.id });
-          } else {
-            setUploadError(saveRes.error || 'Failed to save Metro invoice directly.');
-            setIsUploading(false);
-            return;
-          }
-        } else {
-          onUploadSuccess(data.billData || data.parsedData);
-        }
+        onUploadSuccess({
+          billData: data.billData,
+          items: data.items,
+          rawText: data.rawText
+        });
 
         resetUploadState();
         onClose();
       } else {
-        setUploadError(data.message || data.error || 'Unknown error occurred.');
+        setUploadError(data.error || 'Unknown error occurred.');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Something went wrong.';
+      const msg = err.response?.data?.error || err.message || 'Something went wrong.';
       setUploadError(msg);
     } finally {
       setIsUploading(false);

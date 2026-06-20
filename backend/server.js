@@ -8,10 +8,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const extractRoutes = require('./routes/extractRoutes');
-const metroRoutes = require('./routes/metroRoutes');
-const gstRoutes = require('./routes/gstRoutes');
-const retailRoutes = require('./routes/retailRoutes');
+const billRoutes = require('./routes/billRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,10 +20,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/api', extractRoutes);
-app.use('/api/metro', metroRoutes);
-app.use('/api/gst', gstRoutes);
-app.use('/api/retail', retailRoutes);
+app.use('/api/bills', billRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Bill Reader API is running' });
