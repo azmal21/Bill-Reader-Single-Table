@@ -2,56 +2,76 @@ import React, { useState } from 'react';
 import { saveBill } from '../../services/api';
 
 const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
-  const [data, setData] = useState({ ...billData, sgst: billData.sgst || 0, cgst: billData.cgst || 0 });
+  // Initialize state with the unified schema structure
+  const [data, setData] = useState({
+    billData: {
+      bill_type: billData?.billData?.bill_type || 'unknown',
+      document_number: billData?.billData?.document_number || '',
+      bill_date: billData?.billData?.bill_date || '',
+      vendor_name: billData?.billData?.vendor_name || '',
+      grand_total: billData?.billData?.grand_total || 0,
+      item_count: billData?.items?.length || 0,
+      metadata: billData?.billData?.metadata || {}
+    },
+    items: (billData?.items || []).map(item => ({
+      item_code: item.item_code || '',
+      item_name: item.item_name || item.name || item.articleName || item.item_description || '',
+      quantity: parseFloat(item.quantity) || 1,
+      unit_price: parseFloat(item.unit_price || item.rate || item.itemRate || item.product_rate || item.netAmount) || 0,
+      tax_amount: parseFloat(item.tax_amount || item.taxAmount) || 0,
+      line_total: parseFloat(item.line_total || item.totalRate || item.total || item.totalAmountIncludingGST || item.total_amount) || 0
+    }))
+  });
+
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const handleBillDataChange = (field, value) => {
+    setData({
+      ...data,
+      billData: {
+        ...data.billData,
+        [field]: value
+      }
+    });
+  };
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...data.items];
     newItems[index][field] = value;
-    if (field === 'quantity' || field === 'rate' || field === 'itemRate') {
+    
+    // Auto-calculate line total if quantity or unit_price changes
+    if (field === 'quantity' || field === 'unit_price') {
       const q = parseFloat(newItems[index].quantity) || 0;
-      const r = parseFloat(newItems[index].rate || newItems[index].itemRate) || 0;
-      newItems[index].totalRate = q * r;
-      newItems[index].total = q * r;
+      const up = parseFloat(newItems[index].unit_price) || 0;
+      const ta = parseFloat(newItems[index].tax_amount) || 0;
+      newItems[index].line_total = (q * up) + ta;
     }
+
     setData({ ...data, items: newItems });
+  };
+
+  const addItemRow = () => {
+    setData({
+      ...data,
+      items: [
+        ...data.items,
+        { item_code: '', item_name: '', quantity: 1, unit_price: 0, tax_amount: 0, line_total: 0 }
+      ]
+    });
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     setError('');
     try {
-      const formattedItems = data.items.map(item => ({
-        name: item.name,
-        quantity: parseFloat(item.quantity) || 0,
-        rate: parseFloat(item.rate || item.itemRate) || 0,
-        totalRate: parseFloat(item.totalRate || item.total) || 0
-      }));
-
-      const payload = {
-        restaurantName: data.restaurantName,
-        items: formattedItems,
-        sgst: parseFloat(data.sgst) || 0,
-        cgst: parseFloat(data.cgst) || 0,
-        grandTotal: parseFloat(data.grandTotal) || 0
+      const finalBillData = {
+        ...data.billData,
+        item_count: data.items.length
       };
 
-      if (payload.sgst < 0 || payload.cgst < 0) {
-        setError('SGST and CGST must be greater than or equal to 0.');
-        setIsSaving(false);
-        return;
-      }
-
-      const subtotal = formattedItems.reduce((sum, item) => sum + item.totalRate, 0);
-      const expectedTotal = subtotal + payload.sgst + payload.cgst;
-      if (payload.grandTotal < expectedTotal - 1.0) { // allow small precision gap
-        setError(`Grand Total (${payload.grandTotal}) must be greater than or equal to subtotal + taxes (${expectedTotal.toFixed(2)}).`);
-        setIsSaving(false);
-        return;
-      }
-
-      const result = await saveBill(payload);
+      const result = await saveBill(finalBillData, data.items);
+      
       if (result.success) {
         onSaveSuccess();
       } else {
@@ -64,86 +84,118 @@ const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
     }
   };
 
-  const subtotal = data.items.reduce((sum, item) => sum + ((parseFloat(item.rate || item.itemRate) || 0) * (parseFloat(item.quantity) || 0)), 0);
-
   return (
     <div className="review-bill-container animate-fade-in">
-      <h2>Review & Edit Bill</h2>
+      <h2>Review & Edit Extracted Data</h2>
+      <p className="review-subtitle">Please verify the OCR results before saving.</p>
+      
       {error && <div className="error-box">{error}</div>}
 
-      <div className="invoice-box">
-        <div className="invoice-header">
-          <div className="invoice-divider">--------------------------------------------------</div>
-          <input
-            type="text"
-            className="restaurant-name-input"
-            value={data.restaurantName}
-            onChange={(e) => setData({ ...data, restaurantName: e.target.value })}
-          />
-          <div className="invoice-divider">--------------------------------------------------</div>
+      <div className="review-layout">
+        <div className="review-section">
+          <h3>Header Information</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Bill Type</label>
+              <input 
+                type="text" 
+                value={data.billData.bill_type} 
+                onChange={(e) => handleBillDataChange('bill_type', e.target.value)} 
+                disabled
+              />
+            </div>
+            <div className="form-group">
+              <label>Vendor Name</label>
+              <input 
+                type="text" 
+                value={data.billData.vendor_name} 
+                onChange={(e) => handleBillDataChange('vendor_name', e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label>Document Number</label>
+              <input 
+                type="text" 
+                value={data.billData.document_number} 
+                onChange={(e) => handleBillDataChange('document_number', e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label>Date</label>
+              <input 
+                type="text" 
+                value={data.billData.bill_date} 
+                onChange={(e) => handleBillDataChange('bill_date', e.target.value)} 
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+            <div className="form-group highlight-group">
+              <label>Grand Total</label>
+              <input 
+                type="number" 
+                step="0.01"
+                value={data.billData.grand_total} 
+                onChange={(e) => handleBillDataChange('grand_total', parseFloat(e.target.value) || 0)} 
+              />
+            </div>
+          </div>
         </div>
 
-        <table className="invoice-table">
-          <thead>
-            <tr>
-              <th className="left-align">Item Name</th>
-              <th className="right-align">Qty</th>
-              <th className="right-align">Rate</th>
-              <th className="right-align">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((item, index) => (
-              <tr key={index}>
-                <td className="left-align">
-                  <input type="text" value={item.name} onChange={(e) => handleItemChange(index, 'name', e.target.value)} />
-                </td>
-                <td className="right-align">
-                  <input type="number" className="num-input" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} />
-                </td>
-                <td className="right-align">
-                  <input type="number" step="0.01" className="num-input" value={item.rate || item.itemRate} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
-                </td>
-                <td className="right-align">
-                  <input type="number" step="0.01" className="num-input" value={item.totalRate || item.total} onChange={(e) => handleItemChange(index, 'totalRate', e.target.value)} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="invoice-divider">--------------------------------------------------</div>
-
-        <div className="invoice-summary">
-          <div className="summary-row">
-            <span>SGST</span>
-            <span>
-              ₹ <input type="number" step="0.01" className="num-input tax-input" value={data.sgst} onChange={(e) => setData({ ...data, sgst: e.target.value })} />
-            </span>
+        <div className="review-section mt-4">
+          <div className="section-header-flex">
+            <h3>Line Items ({data.items.length})</h3>
+            <button className="btn-secondary btn-small" onClick={addItemRow}>+ Add Row</button>
           </div>
-          <div className="summary-row">
-            <span>CGST</span>
-            <span>
-              ₹ <input type="number" step="0.01" className="num-input tax-input" value={data.cgst} onChange={(e) => setData({ ...data, cgst: e.target.value })} />
-            </span>
+          
+          <div className="table-responsive">
+            <table className="review-table">
+              <thead>
+                <tr>
+                  <th>Item Code</th>
+                  <th>Description</th>
+                  <th className="num-col">Qty</th>
+                  <th className="num-col">Unit Price</th>
+                  <th className="num-col">Tax Amount</th>
+                  <th className="num-col">Line Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item, index) => (
+                  <tr key={index}>
+                    <td>
+                      <input type="text" value={item.item_code} onChange={(e) => handleItemChange(index, 'item_code', e.target.value)} />
+                    </td>
+                    <td>
+                      <input type="text" value={item.item_name} onChange={(e) => handleItemChange(index, 'item_name', e.target.value)} />
+                    </td>
+                    <td className="num-col">
+                      <input type="number" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} />
+                    </td>
+                    <td className="num-col">
+                      <input type="number" step="0.01" value={item.unit_price} onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)} />
+                    </td>
+                    <td className="num-col">
+                      <input type="number" step="0.01" value={item.tax_amount} onChange={(e) => handleItemChange(index, 'tax_amount', e.target.value)} />
+                    </td>
+                    <td className="num-col">
+                      <input type="number" step="0.01" value={item.line_total} onChange={(e) => handleItemChange(index, 'line_total', e.target.value)} />
+                    </td>
+                  </tr>
+                ))}
+                {data.items.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center text-muted">No items extracted.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-
-          <div className="invoice-divider">--------------------------------------------------</div>
-
-          <div className="summary-row grand-total-row">
-            <span>Grand Total</span>
-            <span>
-              ₹ <input type="number" step="0.01" className="num-input total-input" value={data.grandTotal} onChange={(e) => setData({ ...data, grandTotal: e.target.value })} />
-            </span>
-          </div>
-
-          <div className="invoice-divider">--------------------------------------------------</div>
         </div>
       </div>
 
       <div className="review-actions">
-        <button className="btn btn-ghost" onClick={onCancel} disabled={isSaving}>Cancel</button>
-        <button className="btn btn-primary" onClick={handleSave} disabled={isSaving}>
+        <button className="btn-secondary" onClick={onCancel} disabled={isSaving}>Cancel</button>
+        <button className="btn-primary" onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save Bill'}
         </button>
       </div>

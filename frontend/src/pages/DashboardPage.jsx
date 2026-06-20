@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchBills, fetchMetroInvoices, fetchGSTInvoices } from '../services/api';
+import { fetchBills } from '../services/api';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
@@ -15,36 +15,33 @@ const DashboardPage = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [resBills, resMetro, resGst] = await Promise.all([
-          fetchBills().catch(() => ({ success: false, bills: [] })),
-          fetchMetroInvoices().catch(() => ({ success: false, invoices: [] })),
-          fetchGSTInvoices().catch(() => ({ success: false, invoices: [] }))
-        ]);
+        const res = await fetchBills().catch(() => ({ success: false, bills: [] }));
+        const allBills = res.success ? (res.bills || []) : [];
 
-        const rBills = resBills.success ? (resBills.bills || []) : [];
-        const mBills = resMetro.success ? (resMetro.invoices || resMetro.data || []) : [];
-        const gBills = resGst.success ? (resGst.invoices || resGst.data || []) : [];
+        const rBills = allBills.filter(b => b.bill_type === 'restaurant');
+        const mBills = allBills.filter(b => b.bill_type === 'metro');
+        const gBills = allBills.filter(b => b.bill_type === 'gst');
 
-        // Sum amounts
-        const rTotal = rBills.reduce((sum, b) => sum + (parseFloat(b.total_amount) || 0), 0);
-        const mTotal = mBills.reduce((sum, b) => sum + (parseFloat(b.netAmount) || 0), 0);
-        const gTotal = gBills.reduce((sum, b) => sum + (parseFloat(b.grandTotal) || 0), 0);
+        const rTotal = rBills.reduce((sum, b) => sum + (parseFloat(b.grand_total) || 0), 0);
+        const mTotal = mBills.reduce((sum, b) => sum + (parseFloat(b.grand_total) || 0), 0);
+        const gTotal = gBills.reduce((sum, b) => sum + (parseFloat(b.grand_total) || 0), 0);
 
-        // Aggregate recent bills
-        const allRecent = [
-          ...rBills.map(b => ({ id: b.id, type: 'restaurant', label: b.restaurant_name || 'Restaurant', date: b.date, amount: b.total_amount, link: `/single/${b.id}` })),
-          ...mBills.map(b => ({ id: b.id, type: 'metro', label: b.storeName || 'Metro', date: b.invoiceDate, amount: b.netAmount, link: `/metro/single/${b.id}` })),
-          ...gBills.map(b => ({ id: b.id, type: 'gst', label: b.sellerName || 'GST Seller', date: b.invoiceDate, amount: b.grandTotal, link: `/gst` }))
-        ];
+        const allRecent = allBills.map(b => ({
+          id: b.id,
+          type: b.bill_type || 'unknown',
+          label: b.vendor_name || b.bill_type || 'Bill',
+          date: b.bill_date || b.created_at,
+          amount: b.grand_total,
+          link: `/bills/${b.id}`
+        }));
 
-        // Sort by date (assuming ISO format or standard date strings)
         allRecent.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
         setStats({
           restaurant: { count: rBills.length, total: rTotal },
           metro: { count: mBills.length, total: mTotal },
           gst: { count: gBills.length, total: gTotal },
-          recent: allRecent.slice(0, 5) // Top 5 recent
+          recent: allRecent.slice(0, 5)
         });
 
       } catch (error) {

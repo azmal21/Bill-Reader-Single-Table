@@ -23,7 +23,7 @@ const Sidebar = ({ sidebarCollapsed, activeModule, navItems }) => {
           <button
             key={item.id}
             className={`sidebar-nav-item ${activeModule === item.id ? 'active' : ''} ${item.disabled ? 'disabled' : ''}`}
-            onClick={() => { if (!item.disabled) navigate(item.id === 'restaurant' ? '/restaurent' : `/${item.id}`); }}
+            onClick={() => { if (!item.disabled) navigate(`/${item.id}`); }}
             title={item.label}
             disabled={item.disabled}
           >

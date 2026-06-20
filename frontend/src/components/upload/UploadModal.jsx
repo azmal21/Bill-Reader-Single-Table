@@ -3,7 +3,7 @@ import { uploadBill } from '../../services/api';
 import FileDropZone from './FileDropZone';
 import UploadProgress from './UploadProgress';
 
-const UploadModal = ({ show, uploadType, onClose, onUploadSuccess }) => {
+const UploadModal = ({ show, onClose, onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -27,9 +27,9 @@ const UploadModal = ({ show, uploadType, onClose, onUploadSuccess }) => {
 
   const handleFileSelect = useCallback((file) => {
     if (!file) return;
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      setUploadError('Only JPG/JPEG/PNG images are supported.');
+      setUploadError('Only JPG, PNG, WEBP, and PDF files are supported.');
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -38,7 +38,11 @@ const UploadModal = ({ show, uploadType, onClose, onUploadSuccess }) => {
     }
     setUploadError('');
     setSelectedFile(file);
-    setFilePreview(URL.createObjectURL(file));
+    if (file.type.startsWith('image/')) {
+      setFilePreview(URL.createObjectURL(file));
+    } else {
+      setFilePreview(null); // No preview for PDF
+    }
   }, []);
 
   const handleInputChange = (e) => {
@@ -48,7 +52,7 @@ const UploadModal = ({ show, uploadType, onClose, onUploadSuccess }) => {
 
   const handleImport = async () => {
     if (!selectedFile) {
-      setUploadError('Please select an image file first.');
+      setUploadError('Please select a file first.');
       return;
     }
     setIsUploading(true);
@@ -85,7 +89,7 @@ const UploadModal = ({ show, uploadType, onClose, onUploadSuccess }) => {
     <div className="modal-overlay" onClick={handleClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">Upload Bill Image</h2>
+          <h2 className="modal-title">Upload Bill Document</h2>
           <button className="modal-close" onClick={handleClose} disabled={isUploading}>×</button>
         </div>
         <div className="modal-body">
