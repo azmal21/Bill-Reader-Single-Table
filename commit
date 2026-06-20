@@ -1,0 +1,13 @@
+[33m27a7f56[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m adding frontend and backend files
+[33ma9dc2c0[m removed the empty articla names for cleanup
+[33m16384c6[m improve the parser
+[33mc959a0a[m added the valid HSN code on the frontend
+[33m2f5ff33[m his reverts commit 3551e977d873b2eff658677bc805a48067811769.
+[33m3551e97[m search to search here
+[33m20e1b04[m dummy enters under the header.jsx
+[33md563248[m feat: add item_count support to Metro invoices with corresponding database and service enhancements
+[33m908516f[m refactor: improve indentation and spacing consistency in ReviewMetroBill component render logic
+[33m68e1c5a[m feat: add conditional rendering to BillRow component to support metro bill display format
+[33maac73ef[m refactor: enhance bill summary and list components with dynamic tax rendering and conditional layout support for Metro, GST, and restaurant bill types.
+[33m98878cd[m refactor: improve column allocation logic and enhance invoice line item extraction in metroParser
+[33mb1dec8e[m Initial commit
