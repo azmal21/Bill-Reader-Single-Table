@@ -13,9 +13,9 @@ async function saveBill(billData, itemsData) {
 
     const billQuery = `
       INSERT INTO bills (
-        bill_type, document_number, bill_date, vendor_name, 
-        grand_total, item_count, status, metadata
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        bill_type, document_number, bill_date, vendor_name,
+        grand_total, sgst, cgst, item_count, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *;
     `;
     const billValues = [
@@ -24,9 +24,10 @@ async function saveBill(billData, itemsData) {
       billData.bill_date,
       billData.vendor_name,
       billData.grand_total,
+      billData.sgst || 0,
+      billData.cgst || 0,
       billData.item_count,
-      billData.status || 'valid',
-      billData.metadata ? JSON.stringify(billData.metadata) : null
+      billData.status || 'valid'
     ];
 
     const billResult = await client.query(billQuery, billValues);

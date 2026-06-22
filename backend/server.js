@@ -11,10 +11,10 @@ const path = require('path');
 const billRoutes = require('./routes/billRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite dev server default port
+  origin: ['http://localhost:5173', 'http://localhost:5174'], // Vite dev server default port
   methods: ['GET', 'POST', 'DELETE'],
 }));
 

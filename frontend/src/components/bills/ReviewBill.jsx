@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { saveBill } from '../../services/api';
 
 const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
+  // ===== DEBUG: Log data received by ReviewBill =====
+  console.log('%c\n========== REVIEW BILL: Received Props ==========', 'color: #ff5722; font-weight: bold;');
+  console.log('%c📄 Raw Text (Plain):', 'color: #ff9800;', billData?.rawText);
+  console.log('%c📦 Bill Data (JSON):', 'color: #4caf50;');
+  console.log(JSON.stringify(billData?.billData, null, 2));
+  console.log('%c📋 Items (JSON):', 'color: #9c27b0;');
+  console.log(JSON.stringify(billData?.items, null, 2));
+  console.log('%c=================================================', 'color: #ff5722; font-weight: bold;');
+  // ===== END DEBUG =====
+  
   // Initialize state with the unified schema structure
   const [data, setData] = useState({
     billData: {
@@ -11,7 +21,8 @@ const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
       vendor_name: billData?.billData?.vendor_name || '',
       grand_total: billData?.billData?.grand_total || 0,
       item_count: billData?.items?.length || 0,
-      metadata: billData?.billData?.metadata || {}
+      sgst: billData?.billData?.sgst ?? 0,
+      cgst: billData?.billData?.cgst ?? 0,
     },
     items: (billData?.items || []).map(item => ({
       item_code: item.item_code || '',
@@ -35,6 +46,8 @@ const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
       }
     });
   };
+
+  const isRestaurant = data.billData.bill_type === 'restaurant';
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...data.items];
@@ -75,10 +88,10 @@ const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
       if (result.success) {
         onSaveSuccess();
       } else {
-        setError(result.error || 'Failed to save bill.');
+        setError(result.error + (result.details ? ` Details: ${result.details}` : ''));
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Error saving bill');
+      setError(err.response?.data?.details ? `Error: ${err.response.data.details}` : (err.response?.data?.error || err.message || 'Error saving bill'));
     } finally {
       setIsSaving(false);
     }
@@ -138,6 +151,30 @@ const ReviewBill = ({ billData, onSaveSuccess, onCancel }) => {
                 onChange={(e) => handleBillDataChange('grand_total', parseFloat(e.target.value) || 0)} 
               />
             </div>
+
+            {/* ── SGST / CGST: only for restaurant bills ── */}
+            {isRestaurant && (
+              <>
+                <div className="form-group">
+                  <label>SGST</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.billData.sgst ?? 0}
+                    onChange={(e) => handleBillDataChange('sgst', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>CGST</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={data.billData.cgst ?? 0}
+                    onChange={(e) => handleBillDataChange('cgst', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

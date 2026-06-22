@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/bills',
+  baseURL: 'http://localhost:5001/api/bills',
   timeout: 180000,
   headers: {
     Accept: 'application/json',
@@ -23,6 +23,14 @@ export const uploadBill = async (file, onUploadProgress) => {
       }
     },
   });
+
+  // ===== DEBUG: Log extraction API response =====
+  console.log('\n%c========== API RESPONSE: /import ==========', 'color: #00bcd4; font-weight: bold;');
+  console.log('%c📄 Raw OCR Text (Plain):', 'color: #ff9800; font-weight: bold;');
+  console.log(response.data.rawText);
+  console.log('%c📦 Bill Data (JSON):', 'color: #4caf50; font-weight: bold;');
+
+  // ===== END DEBUG =====
 
   return response.data;
 };

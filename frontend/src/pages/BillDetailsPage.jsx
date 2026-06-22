@@ -45,27 +45,11 @@ const BillDetailsPage = ({ handleDelete }) => {
   if (error) return <div className="error-message">{error}</div>;
   if (!bill) return <div className="error-message">Bill not found.</div>;
 
-  // Dynamically determine item columns
-  const itemKeys = new Set();
-  items.forEach(item => {
-    Object.keys(item).forEach(key => {
-      // Exclude internal database keys
-      if (!['id', 'bill_id', 'created_at', 'updated_at'].includes(key) && item[key] !== null && item[key] !== '') {
-        itemKeys.add(key);
-      }
-    });
-  });
-  
-  // Enforce a logical order for common columns if they exist
-  const priorityKeys = ['item_code', 'item_name', 'quantity', 'unit_price', 'discount_amount', 'tax_percent', 'tax_amount', 'line_total', 'status'];
-  const columns = Array.from(itemKeys).sort((a, b) => {
-    const idxA = priorityKeys.indexOf(a);
-    const idxB = priorityKeys.indexOf(b);
-    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-    if (idxA !== -1) return -1;
-    if (idxB !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  const columns = [
+    'bill_id', 'item_code', 'item_name', 'quantity',
+    'unit_price', 'discount_amount', 'tax_percent',
+    'tax_amount', 'line_total', 'status'
+  ];
 
   const formatHeader = (key) => {
     return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -88,8 +72,8 @@ const BillDetailsPage = ({ handleDelete }) => {
           ← Back to Bills
         </button>
         <div className="header-actions">
-          <button 
-            className="btn-danger" 
+          <button
+            className="btn-danger"
             onClick={() => {
               handleDelete(bill.id);
               navigate('/bills');
@@ -101,62 +85,48 @@ const BillDetailsPage = ({ handleDelete }) => {
       </div>
 
       <div className="bill-data-layout">
-        <div className="bill-metadata">
-          <h2>Bill Summary</h2>
-          <div className="metadata-grid">
-            <div className="meta-field">
-              <label>Bill Type</label>
-              <div className="meta-value" style={{textTransform: 'capitalize'}}>{bill.bill_type || 'Unknown'}</div>
-            </div>
-            <div className="meta-field">
-              <label>Document Number</label>
-              <div className="meta-value">{bill.document_number || '-'}</div>
-            </div>
-            <div className="meta-field">
-              <label>Date</label>
-              <div className="meta-value">{bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : '-'}</div>
-            </div>
-            <div className="meta-field">
-              <label>Vendor Name</label>
-              <div className="meta-value">{bill.vendor_name || '-'}</div>
-            </div>
-            <div className="meta-field highlight">
-              <label>Grand Total</label>
-              <div className="meta-value">{formatCurrency(bill.grand_total)}</div>
-            </div>
-            <div className="meta-field">
-              <label>Item Count</label>
-              <div className="meta-value">{bill.item_count || 0}</div>
-            </div>
-            <div className="meta-field">
-              <label>Status</label>
-              <div className="meta-value">{bill.status || '-'}</div>
-            </div>
-            <div className="meta-field">
-              <label>Created At</label>
-              <div className="meta-value">{bill.created_at ? new Date(bill.created_at).toLocaleString() : '-'}</div>
-            </div>
+        <div className="bill-items" style={{ width: '100%' }}>
+          {/* ── Bill Summary Bar ── */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: '1rem',
+            background: '#f8fafc', border: '1px solid #e2e8f0',
+            borderRadius: '10px', padding: '0.85rem 1.25rem',
+            marginBottom: '1.25rem', fontSize: '0.88rem', color: '#334155'
+          }}>
+            <span><strong>Bill ID:</strong> {bill.id}</span>
+            <span><strong>Document No:</strong> {bill.document_number || '—'}</span>
+            <span><strong>Date:</strong> {bill.bill_date ? new Date(bill.bill_date).toLocaleDateString('en-IN') : '—'}</span>
+            <span><strong>Vendor:</strong> {bill.vendor_name || '—'}</span>
+            <span><strong>Grand Total:</strong> <span style={{color:'#059669', fontWeight:700}}>{formatCurrency(bill.grand_total)}</span></span>
+            <span><strong>Type:</strong> <span style={{textTransform:'capitalize'}}>{bill.bill_type || '—'}</span></span>
+            {/* ── Tax breakdown: only when SGST or CGST exist ── */}
+            {(() => {
+              const sgst = parseFloat(bill.sgst ?? 0);
+              const cgst = parseFloat(bill.cgst ?? 0);
+              if (!sgst && !cgst) return null;
+              return (
+                <>
+                  {sgst > 0 && (
+                    <span>
+                      <strong>SGST:</strong>{' '}
+                      <span style={{color:'#7c3aed', fontWeight:600}}>
+                        ₹{sgst.toFixed(2)}
+                      </span>
+                    </span>
+                  )}
+                  {cgst > 0 && (
+                    <span>
+                      <strong>CGST:</strong>{' '}
+                      <span style={{color:'#7c3aed', fontWeight:600}}>
+                        ₹{cgst.toFixed(2)}
+                      </span>
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
-          
-          {bill.metadata && Object.keys(bill.metadata).length > 0 && (
-            <div className="additional-metadata">
-              <h3>Metadata ({bill.bill_type} specific)</h3>
-              <div className="metadata-grid">
-                {Object.entries(bill.metadata).map(([key, value]) => {
-                  if (typeof value === 'object' || value === null || value === '') return null;
-                  return (
-                    <div className="meta-field" key={key}>
-                      <label>{formatHeader(key)}</label>
-                      <div className="meta-value">{value.toString()}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
 
-        <div className="bill-items">
           <h2>Line Items ({items.length})</h2>
           {items.length > 0 ? (
             <div className="table-responsive">
@@ -189,22 +159,6 @@ const BillDetailsPage = ({ handleDelete }) => {
             </div>
           ) : (
             <p className="no-items-msg">No line items were extracted for this bill.</p>
-          )}
-        </div>
-
-        <div className="raw-data-section">
-          <div className="section-header-flex">
-            <h2>Raw Extracted Data</h2>
-            <button className="btn-secondary btn-small" onClick={() => setShowRawJson(!showRawJson)}>
-              {showRawJson ? 'Hide JSON' : 'View JSON'}
-            </button>
-          </div>
-          {showRawJson && (
-            <div className="raw-json-container" style={{background: '#1e1e1e', color: '#d4d4d4', padding: '1rem', borderRadius: '8px', overflowX: 'auto', marginTop: '1rem'}}>
-              <pre style={{margin: 0, fontSize: '0.85rem', fontFamily: 'monospace'}}>
-                {JSON.stringify({ bill, items }, null, 2)}
-              </pre>
-            </div>
           )}
         </div>
       </div>

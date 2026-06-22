@@ -1,7 +1,7 @@
 /* ReviewBill.css - Review & Bill Details styles */
 
 .review-bill-container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 2rem;
 }
@@ -107,57 +107,11 @@
   gap: 2rem;
 }
 
-.bill-metadata h2,
 .bill-items h2 {
   font-size: 1.25rem;
   margin: 0 0 1rem;
   font-weight: 600;
   color: #1e293b;
-}
-
-.metadata-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
-}
-
-.meta-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.meta-field label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: #94a3b8;
-  letter-spacing: 0.4px;
-}
-
-.meta-value {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #1e293b;
-}
-
-.meta-field.highlight .meta-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #059669;
-}
-
-.additional-metadata {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.additional-metadata h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #475569;
-  margin: 0 0 1rem;
 }
 
 /* Items Table */
@@ -348,8 +302,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .review-wrapper {

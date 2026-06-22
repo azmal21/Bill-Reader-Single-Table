@@ -17,9 +17,10 @@ pool.query(`
     bill_date TEXT,
     vendor_name TEXT,
     grand_total DECIMAL(12, 2) DEFAULT 0,
+    sgst DECIMAL(12, 2) DEFAULT 0,
+    cgst DECIMAL(12, 2) DEFAULT 0,
     item_count INTEGER DEFAULT 0,
     status VARCHAR(50) DEFAULT 'valid',
-    metadata JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
@@ -39,10 +40,10 @@ pool.query(`
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 `)
-.then(() => console.log('✅ PostgreSQL Connected & Tables ensured.'))
-.catch(err => {
-  console.error('❌ PostgreSQL Connection Error:', err.message);
-  console.log('Please ensure PostgreSQL is running and credentials are correct in .env');
-});
+  .then(() => console.log('✅ PostgreSQL Connected & Tables ensured.'))
+  .catch(err => {
+    console.error('❌ PostgreSQL Connection Error:', err.message);
+    console.log('Please ensure PostgreSQL is running and credentials are correct in .env');
+  });
 
 module.exports = pool;

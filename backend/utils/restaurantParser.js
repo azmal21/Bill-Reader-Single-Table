@@ -1,13 +1,13 @@
 // --- HELPER FUNCTIONS FOR OCR PARSING ---
 
 function extractNumbers(line) {
-  const tokens = line.split(/\\s+/);
+  const tokens = line.split(/\s+/);
   const nums = [];
   for (let token of tokens) {
-    // Remove OCR artifacts: leading 'x', broken currency '%', 'R', '₹'
-    token = token.replace(/^[x₹R%]+/i, '');
+    // Remove OCR artifacts: leading 'x', broken currency '%', 'R', '₹', '$'
+    token = token.replace(/^[x₹R%$]+/i, '');
     token = token.replace(/,/g, ''); // Remove commas
-    if (/^\\d+(\\.\\d+)?$/.test(token)) {
+    if (/^\d+(\.\d+)?$/.test(token)) {
       nums.push(parseFloat(token));
     }
   }
@@ -45,10 +45,11 @@ function detectColumnFormat(lines) {
 }
 
 function isValidItemLine(name) {
-  const words = name.split(/\\s+/);
-  // Requires at least one word that has 3 or more letters
-  const hasLongWord = words.some(w => /^[a-zA-Z]{3,}$/.test(w.replace(/[^a-zA-Z]/g, '')));
-  return hasLongWord;
+  if (!name || name.trim() === '') return false;
+  const words = name.split(/\s+/);
+  // Relaxed: Requires at least one word that has 2 or more letters
+  const hasWord = words.some(w => /[a-zA-Z]{2,}/.test(w));
+  return hasWord;
 }
 
 function detectQuantity(nums) {
@@ -90,7 +91,7 @@ function correctRupeeSymbolOCR(price, quantity, total) {
 }
 
 function recoverOcrQuantity(line) {
-  const tokens = line.split(/\\s+/);
+  const tokens = line.split(/\s+/);
   const map = {
     'Z': 2, 'z': 2,
     'I': 1, 'l': 1, 'i': 1,
@@ -179,7 +180,7 @@ function extractGST(lines) {
   for (const line of lines) {
     const lower = line.toLowerCase();
 
-    const matches = line.match(/\\d+\\.\\d+/g);
+    const matches = line.match(/\d+\.\d+/g);
 
     if (matches) {
       const amount = parseFloat(matches[matches.length - 1]);
@@ -211,7 +212,7 @@ function extractGrandTotal(lines) {
       continue;
     }
 
-    // Prefer Grand Total, Total, Net Payable
+    // Prefer Grand Total, Total, Net Payable, etc.
     if (
       lowerLine.includes("grand total") ||
       lowerLine.includes("invoice amount") ||
@@ -219,7 +220,11 @@ function extractGrandTotal(lines) {
       lowerLine.includes("net payable") ||
       lowerLine.includes("amount payable") ||
       lowerLine.includes("bill amount") ||
-      /^total\\s*:?\\s*/i.test(line)
+      lowerLine.includes("amount due") ||
+      lowerLine.includes("total amount") ||
+      lowerLine.includes("paid amount") ||
+      /^total\s*:?\s*/i.test(line) ||
+      /^total/i.test(line)
     ) {
       const nums = extractNumbers(line);
       if (nums.length > 0) {
@@ -232,7 +237,75 @@ function extractGrandTotal(lines) {
     }
   }
 
+  // Fallback: if grandTotal is still 0, look for the largest number near the end of the receipt
+  if (grandTotal === 0 && lines.length > 0) {
+    const lastFewLines = lines.slice(-10);
+    for (const line of lastFewLines) {
+      const nums = extractNumbers(line);
+      if (nums.length > 0) {
+        const maxInLine = Math.max(...nums);
+        if (maxInLine > grandTotal) {
+          grandTotal = maxInLine;
+        }
+      }
+    }
+  }
+
   return { grandTotal, matchLine };
+}
+
+// ── NEW: extract document / bill number ─────────────────────────
+function extractDocumentNumber(lines) {
+  // Patterns: Bill No, Receipt No, Invoice No, Order No, Token No, Ticket No
+  const docPatterns = [
+    /(?:bill\s*no|receipt\s*no|invoice\s*no|order\s*no|token\s*no|ticket\s*no|txn\s*no|trans\s*no|ref\s*no|order\s*id|receipt\s*#|bill\s*#)\s*[:#]?\s*([A-Z0-9\-/]+)/i,
+    /(?:no\.?|#)\s*([A-Z0-9\-/]{3,15})\s*$/i,
+  ];
+  for (const line of lines) {
+    for (const pattern of docPatterns) {
+      const match = line.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+  }
+  return '';
+}
+
+// ── NEW: extract bill date ────────────────────────────────────────
+function extractBillDate(lines) {
+  // Try to find a date keyword line first
+  const dateKeywordPattern = /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*[:#]?\s*([0-9]{1,2}[\-/\.][0-9]{1,2}[\-/\.][0-9]{2,4})/i;
+  const isoPattern = /\b(\d{4}-\d{2}-\d{2})\b/;
+  const dmyPattern = /\b(\d{1,2}[\-/.](\d{1,2})[\-/.]\d{2,4})\b/;
+
+  for (const line of lines) {
+    // Prefer lines explicitly labeled as date
+    const kwMatch = line.match(dateKeywordPattern);
+    if (kwMatch) return normaliseDate(kwMatch[1]);
+  }
+  // Fallback: scan first 20 lines for any recognisable date
+  for (const line of lines.slice(0, 20)) {
+    const isoMatch = line.match(isoPattern);
+    if (isoMatch) return isoMatch[1];
+    const dmyMatch = line.match(dmyPattern);
+    if (dmyMatch) return normaliseDate(dmyMatch[1]);
+  }
+  return '';
+}
+
+function normaliseDate(str) {
+  // Convert D/M/YY or D-M-YY → YYYY-MM-DD
+  const parts = str.split(/[\-/.]/);
+  if (parts.length === 3) {
+    let [a, b, c] = parts.map(p => p.padStart(2, '0'));
+    // If first part is 4-digit year it's already ISO-ish
+    if (a.length === 4) return `${a}-${b}-${c}`;
+    // Assume DD-MM-YY(YY)
+    if (c.length === 2) c = '20' + c;
+    return `${c}-${b}-${a}`;
+  }
+  return str;
 }
 
 function cleanRestaurantName(name) {
@@ -247,7 +320,7 @@ function cleanRestaurantName(name) {
     "g"
   ];
 
-  let words = name.split(/\\s+/);
+  let words = name.split(/\s+/);
 
   while (
     words.length > 1 &&
@@ -262,9 +335,9 @@ function cleanRestaurantName(name) {
 // Clean OCR text
 const cleanOcrText = (raw) => {
   return raw
-    .replace(/%(\\s*\\d)/g, "₹$1")
-    .replace(/[ \\t]{2,}/g, " ")
-    .replace(/[^a-zA-Z0-9₹., \\n:-]/g, "") // Remove unnecessary symbols
+    .replace(/%(\s*\d)/g, "₹$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[^a-zA-Z0-9₹.,$ \n:-]/g, "") // Remove unnecessary symbols
     .trim();
 };
 
@@ -288,7 +361,13 @@ function fixOcrAmount(qty, rate, total) {
 
 // Resilient Regex-based parser for Bill items
 const parseBillRegex = (ocrText) => {
-  let lines = ocrText.split('\\n').map(l => l.trim()).filter(l => l);
+  let originalLines = ocrText.split('\n').map(l => l.trim()).filter(l => l);
+  let lines = [...originalLines];
+
+  // Extract document number and date from the raw (unfiltered) lines
+  const documentNumber = extractDocumentNumber(originalLines);
+  const billDate = extractBillDate(originalLines);
+  console.log(`[DEBUG] documentNumber: "${documentNumber}" | billDate: "${billDate}"`);
 
   // Ignore specific phrases
   const ignorePhrases = [
@@ -307,30 +386,34 @@ const parseBillRegex = (ocrText) => {
       if (lowerLine.includes(phrase)) return false;
     }
     // Skip address-like lines with Indian pincodes
-    if (/\\b\\d{6}\\b/.test(line)) return false;
+    if (/\b\d{6}\b/.test(line)) return false;
     // Skip lines containing many commas (usually addresses)
     if ((line.match(/,/g) || []).length >= 2) return false;
     return true;
   });
   
-  let restaurantName = findRestaurantName(lines);
+  let restaurantName = findRestaurantName(originalLines);
 
-  function findRestaurantName(lines) {
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      const line = lines[i];
+  function findRestaurantName(sourceLines) {
+    for (let i = 0; i < Math.min(8, sourceLines.length); i++) {
+      const line = sourceLines[i];
       // Ignore very short OCR garbage
-      if (line.length < 5) continue;
+      if (line.length < 4) continue;
       // Ignore lines containing many numbers
-      if ((line.match(/\\d/g) || []).length > 2) continue;
-      return cleanRestaurantName(line);
+      if ((line.match(/\d/g) || []).length > 2) continue;
+      
+      const cleaned = cleanRestaurantName(line);
+      if (cleaned.length >= 4) {
+        return cleaned;
+      }
     }
-    return lines[0] || "Unknown Restaurant";
+    return sourceLines[0] || "Unknown Restaurant";
   }
   
   const items = [];
   const format = detectColumnFormat(lines);
   const { sgst, cgst } = extractGST(lines);
-  const { grandTotal, matchLine } = extractGrandTotal(lines);
+  const { grandTotal, matchLine } = extractGrandTotal(originalLines);
 
   for (const line of lines) {
     const lowerLine = line.toLowerCase();
@@ -342,8 +425,10 @@ const parseBillRegex = (ocrText) => {
       lowerLine.includes("qty") ||
       lowerLine.includes("cgst") ||
       lowerLine.includes("sgst") ||
-      lowerLine.includes("igst")
+      lowerLine.includes("igst") ||
+      lowerLine.includes("tax")
     ) {
+      console.log(`[DEBUG] Ignored generic/tax/total line: "${line}"`);
       continue;
     }
 
@@ -359,53 +444,14 @@ const parseBillRegex = (ocrText) => {
       nums.shift(); // Remove serial number
     }
 
-    // An item line usually has at least 2 numbers (qty, total)
-    // or 3 numbers (qty, rate, total)
-    if (nums.length >= 2) {
-      let qty = nums.find(
-        n => Number.isInteger(n) && n > 0 && n <= 20
-      );
-
-      if (!qty) {
-        continue;
-      }
-
-      let monetaryValues = [...nums];
-      monetaryValues.splice(monetaryValues.indexOf(qty), 1);
-
-      if (monetaryValues.length === 0) {
-        continue;
-      }
-
-      let total, itemRate;
-
-      if (monetaryValues.length === 1) {
-        total = monetaryValues[0];
-        itemRate = total / qty;
-      } else {
-        total = Math.max(...monetaryValues);
-        let remaining = [...monetaryValues];
-        remaining.splice(remaining.indexOf(total), 1);
-        itemRate = Math.min(...remaining);
-
-        // OCR garbage protection
-        if (itemRate < 10 && total > 100) {
-          itemRate = total / qty;
-        }
-      }
-
-      total = fixOcrAmount(qty, itemRate, total);
-
-      if (total < itemRate) {
-        continue;
-      }
-
+    // Tolerate lines with at least 1 number or just text if we can find a valid item name
+    if (nums.length >= 1) {
       // Reconstruct name
-      let nameTokens = line.split(/\\s+/);
+      let nameTokens = line.split(/\s+/);
       let nameParts = [];
       let tempNums = [...nums];
       for (let token of nameTokens) {
-        let clean = token.replace(/^[x₹R%]+/i, '').replace(/,/g, '');
+        let clean = token.replace(/^[x₹R%$]+/i, '').replace(/,/g, '');
         let num = parseFloat(clean);
         if (!isNaN(num) && tempNums.includes(num)) {
           tempNums.splice(tempNums.indexOf(num), 1);
@@ -414,21 +460,58 @@ const parseBillRegex = (ocrText) => {
         nameParts.push(token);
       }
       let name = nameParts.join(' ')
-        .replace(/^[xX]\\s*/, '')
-        .replace(/[^a-zA-Z0-9\\s]/g, '')
-        .replace(/\\s{2,}/g, ' ')
+        .replace(/^[xX]\s*/, '')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .replace(/\s{2,}/g, ' ')
         .trim();
 
       if (!isValidItemLine(name)) {
+        console.log(`[DEBUG] Rejected line: "${line}" - Reason: Invalid item name (${name})`);
         continue;
       }
 
+      let qty = nums.find(n => Number.isInteger(n) && n > 0 && n <= 20) || 1; // Default to 1
+
+      let monetaryValues = [...nums];
+      if (nums.includes(qty) && nums.length > 1) {
+        monetaryValues.splice(monetaryValues.indexOf(qty), 1);
+      }
+
+      let total = 0, itemRate = 0;
+
+      if (monetaryValues.length > 0) {
+        if (monetaryValues.length === 1) {
+          total = monetaryValues[0];
+          itemRate = total / qty;
+        } else {
+          total = Math.max(...monetaryValues);
+          let remaining = [...monetaryValues];
+          remaining.splice(remaining.indexOf(total), 1);
+          itemRate = Math.min(...remaining);
+
+          // OCR garbage protection
+          if (itemRate < 10 && total > 100) {
+            itemRate = total / qty;
+          }
+        }
+        total = fixOcrAmount(qty, itemRate, total);
+      } else {
+        console.log(`[DEBUG] Missing amounts for line: "${line}", proceeding with 0`);
+      }
+
+      // We no longer reject items where total < itemRate
+      // We accept partial items
+
+      console.log(`[DEBUG] Accepted item: Name="${name}", Qty=${qty}, Rate=${itemRate}, Total=${total}`);
+
       items.push({
-        name: name,
+        name: name || "Unknown Item",
         quantity: qty,
         itemRate: itemRate,
         total: total
       });
+    } else {
+      console.log(`[DEBUG] Rejected line: "${line}" - Reason: No numbers found.`);
     }
   }
 
@@ -437,7 +520,9 @@ const parseBillRegex = (ocrText) => {
     finalGrandTotal = items.reduce((sum, item) => sum + item.total, 0);
   }
 
-  return { restaurantName, items, sgst, cgst, grandTotal: finalGrandTotal };
+  console.log(`[DEBUG] Final Parsed Values - Name: "${restaurantName}", DocNo: "${documentNumber}", Date: "${billDate}", Items Count: ${items.length}, SGST: ${sgst}, CGST: ${cgst}, Grand Total: ${finalGrandTotal}`);
+
+  return { restaurantName, documentNumber, billDate, items, sgst, cgst, grandTotal: finalGrandTotal };
 };
 
 module.exports = {

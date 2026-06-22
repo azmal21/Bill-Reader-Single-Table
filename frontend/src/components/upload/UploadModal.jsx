@@ -60,9 +60,16 @@ const UploadModal = ({ show, onClose, onUploadSuccess }) => {
     setUploadProgress(0);
 
     try {
-      const data = await uploadBill(selectedFile, (percent) => setUploadProgress(percent));
-
+      const data = await uploadBill(selectedFile, setUploadProgress);
       if (data.success) {
+        // ===== DEBUG: Log data passed to review =====
+        console.log('%c\n========== UPLOAD SUCCESS: Data for Review ==========', 'color: #2196f3; font-weight: bold;');
+        console.log('%c📄 Raw Text:', 'color: #ff9800;', data.rawText);
+        console.log('%c📦 Bill Data:', 'color: #4caf50;', JSON.stringify(data.billData, null, 2));
+        console.log('%c📋 Items:', 'color: #9c27b0;', JSON.stringify(data.items, null, 2));
+        console.log('%c====================================================', 'color: #2196f3; font-weight: bold;');
+        // ===== END DEBUG =====
+        
         onUploadSuccess({
           billData: data.billData,
           items: data.items,
@@ -72,11 +79,10 @@ const UploadModal = ({ show, onClose, onUploadSuccess }) => {
         resetUploadState();
         onClose();
       } else {
-        setUploadError(data.error || 'Unknown error occurred.');
+        setUploadError(data.error + (data.details ? ` Details: ${data.details}` : ''));
       }
     } catch (err) {
-      const msg = err.response?.data?.error || err.message || 'Something went wrong.';
-      setUploadError(msg);
+      setUploadError(err.response?.data?.details ? `Error: ${err.response.data.details}` : (err.response?.data?.error || err.message || 'Error uploading file.'));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

@@ -432,10 +432,9 @@
 
 /* ── Review Bill Page ─────────────────────────────── */
 .review-bill-container {
-  background: #ffffff; border: 1px solid #e5e7eb;
-  border-radius: 16px; padding: 32px 40px; width: 100%; max-width: 600px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  display: flex; flex-direction: column; gap: 24px;
+  width: 100%;
+  padding: 2rem 2rem;
+  box-sizing: border-box;
 }
 .review-bill-container h2 {
   font-size: 1.5rem; font-weight: 700; color: #1f2937; margin: 0; text-align: center;

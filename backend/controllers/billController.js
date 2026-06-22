@@ -18,33 +18,44 @@ const extractBill = async (req, res) => {
 
   const filePath = req.file.path;
   const processedPath = `${filePath}-processed.jpg`;
+  const isPDF = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
+  let stage = 'init';
 
   try {
     // 1. Preprocess
-    await sharp(filePath)
-      .rotate()
+    stage = 'preprocess';
+    const sharpInstance = isPDF
+      ? sharp(filePath, { density: 300, page: 0 })  // Render first page of PDF at 300 DPI
+      : sharp(filePath).rotate();
+
+    await sharpInstance
       .resize({ width: 1500, fit: 'inside', withoutEnlargement: true })
       .grayscale()
       .normalize()
       .sharpen()
+      .jpeg({ quality: 90 })
       .toFile(processedPath);
 
     // 2. OCR
+    stage = 'ocr';
     const ocrResult = await performOCR(processedPath);
     const rawText = ocrResult.text;
 
     // 3. Classify
+    stage = 'classify';
     const billType = detectBillType(rawText);
 
     // 4. Parse & Map to Unified Schema
+    stage = 'parse';
     let unifiedBill = {
       bill_type: billType,
       document_number: '',
       bill_date: '',
       vendor_name: '',
       grand_total: 0,
-      item_count: 0,
-      metadata: { confidence: ocrResult.confidence, raw_text: rawText }
+      sgst: 0,
+      cgst: 0,
+      item_count: 0
     };
     let unifiedItems = [];
 
@@ -54,9 +65,7 @@ const extractBill = async (req, res) => {
       unifiedBill.bill_date = parsed.invoice.invoice_date || '';
       unifiedBill.vendor_name = parsed.invoice.vendor_name || 'METRO Cash and Carry';
       unifiedBill.grand_total = parsed.invoice.grand_total || 0;
-      unifiedBill.metadata.customer_name = parsed.invoice.customer_name;
-      unifiedBill.metadata.gst_number = parsed.invoice.gst_number;
-      
+
       unifiedItems = parsed.items.map(item => ({
         item_code: item.article_code || '',
         item_name: item.article_name || '',
@@ -74,8 +83,7 @@ const extractBill = async (req, res) => {
       unifiedBill.bill_date = parsed.invoice.invoice_date || '';
       unifiedBill.vendor_name = parsed.invoice.seller_name || '';
       unifiedBill.grand_total = parsed.invoice.grand_total || 0;
-      unifiedBill.metadata.gstin = parsed.invoice.gstin;
-      
+
       unifiedItems = parsed.items.map(item => ({
         item_code: item.hsn_code || '',
         item_name: item.item_description || '',
@@ -88,30 +96,32 @@ const extractBill = async (req, res) => {
       }));
     } else if (billType === 'retail') {
       const parsed = parseRetailInvoice(rawText);
-      unifiedBill.document_number = parsed.invoice.invoice_number || '';
-      unifiedBill.bill_date = parsed.invoice.invoice_date || '';
-      unifiedBill.vendor_name = parsed.invoice.vendor_name || '';
-      unifiedBill.grand_total = parsed.invoice.grand_total || 0;
+      unifiedBill.document_number = parsed.invoiceNumber || '';
+      unifiedBill.bill_date = parsed.invoiceDate || '';
+      unifiedBill.vendor_name = parsed.sellerName || '';
+      unifiedBill.grand_total = parsed.grandTotal || 0;
       
-      unifiedItems = parsed.items.map(item => ({
-        item_code: item.article_code || '',
-        item_name: item.article_name || '',
-        quantity: item.quantity || 0,
-        unit_price: item.net_amount / (item.quantity || 1) || 0,
-        discount_amount: item.discount_amount || 0,
-        tax_percent: item.tax_percent || 0,
-        tax_amount: item.tax_amount || 0,
-        line_total: item.total_amount || 0
+      unifiedItems = (parsed.items || []).map(item => ({
+        item_code: item.hsnCode || '',
+        item_name: item.itemDescription || '',
+        quantity: item.qty || 0,
+        unit_price: item.productRate || 0,
+        discount_amount: 0,
+        tax_percent: (item.cgstPercent || 0) + (item.sgstPercent || 0),
+        tax_amount: (item.cgstAmount || 0) + (item.sgstAmount || 0),
+        line_total: item.totalAmount || 0
       }));
     } else {
       // restaurant
       const cleanedText = cleanOcrText(rawText);
       const parsed = parseBillRegex(cleanedText);
       unifiedBill.vendor_name = parsed.restaurantName || '';
+      unifiedBill.document_number = parsed.documentNumber || '';
+      unifiedBill.bill_date = parsed.billDate || '';
       unifiedBill.grand_total = parsed.grandTotal || 0;
-      unifiedBill.metadata.sgst = parsed.sgst;
-      unifiedBill.metadata.cgst = parsed.cgst;
-      
+      unifiedBill.sgst = parsed.sgst || 0;
+      unifiedBill.cgst = parsed.cgst || 0;
+
       unifiedItems = parsed.items.map(item => ({
         item_name: item.name || '',
         quantity: item.quantity || 0,
@@ -124,6 +134,19 @@ const extractBill = async (req, res) => {
 
     const extractionTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
+    // ===== DEBUG: Log all extracted data =====
+    console.log('\n========== EXTRACTION RESULTS ==========');
+    console.log('📄 Bill Type:', billType);
+    console.log('⏱️  Extraction Time:', extractionTime + 's');
+    console.log('\n--- RAW OCR TEXT (Plain) ---');
+    console.log(rawText);
+    console.log('\n--- PARSED BILL DATA (JSON) ---');
+    console.log(JSON.stringify(unifiedBill, null, 2));
+    console.log('\n--- PARSED ITEMS (JSON) ---');
+    console.log(JSON.stringify(unifiedItems, null, 2));
+    console.log('=========================================\n');
+    // ===== END DEBUG =====
+
     return res.status(200).json({
       success: true,
       billData: unifiedBill,
@@ -133,8 +156,13 @@ const extractBill = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Extraction error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to extract bill.', details: error.message });
+    console.error(`Extraction error at stage [${stage}]:`, error);
+    const userMessage = stage === 'preprocess'
+      ? 'Image could not be processed. Please upload a valid JPG, PNG, WEBP, or PDF file.'
+      : stage === 'ocr'
+      ? 'OCR failed to read the document. Try a clearer image.'
+      : 'Failed to extract bill data.';
+    return res.status(500).json({ success: false, error: userMessage, details: error.message, stage });
   } finally {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     if (fs.existsSync(processedPath)) fs.unlinkSync(processedPath);
@@ -152,7 +180,7 @@ const saveBill = async (req, res) => {
     return res.status(200).json({ success: true, ...saved });
   } catch (error) {
     console.error('Error in saveBill:', error);
-    return res.status(500).json({ success: false, error: 'Failed to save bill.' });
+    return res.status(500).json({ success: false, error: 'Failed to save bill.', details: error.message, stack: error.stack });
   }
 };
 

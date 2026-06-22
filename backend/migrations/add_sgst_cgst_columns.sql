@@ -1,0 +1,3 @@
+-- Add SGST and CGST as dedicated columns on the bills table
+ALTER TABLE bills ADD COLUMN IF NOT EXISTS sgst DECIMAL(12, 2) DEFAULT 0;
+ALTER TABLE bills ADD COLUMN IF NOT EXISTS cgst DECIMAL(12, 2) DEFAULT 0;

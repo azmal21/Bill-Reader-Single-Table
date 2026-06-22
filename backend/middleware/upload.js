@@ -32,16 +32,16 @@ const storage = multer.diskStorage({
 
 // ── File Filter ──────────────────────────────────────────────────────────────
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
 
   if (allowedMimeTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
     // Accept the file
     cb(null, true);
   } else {
     // Reject the file with a descriptive error
-    cb(new Error('Only JPG, JPEG, PNG, or PDF files are allowed.'), false);
+    cb(new Error('Only JPG, JPEG, PNG, WEBP, or PDF files are allowed.'), false);
   }
 };
 

@@ -116,6 +116,13 @@ function App() {
         show={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadSuccess={(data) => {
+          // ===== DEBUG: Log data flowing through App =====
+          console.log('%c\n========== APP: onUploadSuccess ==========', 'color: #e91e63; font-weight: bold;');
+          console.log('%c📦 Received data:', 'color: #4caf50;', data);
+          console.log(JSON.stringify(data, null, 2));
+          console.log('%c==========================================', 'color: #e91e63; font-weight: bold;');
+          // ===== END DEBUG =====
+          
           if (data && data.saved) {
             setRefreshTrigger(prev => prev + 1);
             if (data.id) {
