@@ -117,22 +117,29 @@ const BillDetailsPage = ({ handleDelete }) => {
       <div className="bill-data-layout">
         <div className="bill-items" style={{ width: '100%' }}>
 
-          {/* ── Summary bar ── */}
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '1rem',
-            background: '#f8fafc', border: '1px solid #e2e8f0',
-            borderRadius: '10px', padding: '0.85rem 1.25rem',
-            marginBottom: '1.25rem', fontSize: '0.88rem', color: '#334155',
-          }}>
-            <span><strong>Bill ID:</strong> {bill.id}</span>
-            <span><strong>Document No:</strong> {bill.document_number || '—'}</span>
-            <span>
-              <strong>Date:</strong>{' '}
-              {bill.bill_date
-                ? new Date(bill.bill_date).toLocaleDateString('en-IN')
-                : '—'}
-            </span>
-            <span><strong>Vendor:</strong> {bill.vendor_name || '—'}</span>
+          <div className="bill-summary-bar">
+            {bill.id && (
+              <div className="bill-summary-item">
+                <span className="bill-summary-label">Bill ID</span>
+                <span className="bill-summary-value">{bill.id}</span>
+              </div>
+            )}
+            {bill.document_number && (
+              <div className="bill-summary-item">
+                <span className="bill-summary-label">Document No</span>
+                <span className="bill-summary-value">{bill.document_number}</span>
+              </div>
+            )}
+            {bill.bill_date && (
+              <div className="bill-summary-item">
+                <span className="bill-summary-label">Date</span>
+                <span className="bill-summary-value">{new Date(bill.bill_date).toLocaleDateString('en-IN')}</span>
+              </div>
+            )}
+            <div className="bill-summary-item">
+              <span className="bill-summary-label">Vendor</span>
+              <span className="bill-summary-value">{bill.vendor_name || '—'}</span>
+            </div>
           </div>
 
           {/* ── Line items table ── */}

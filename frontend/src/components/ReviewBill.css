@@ -19,6 +19,10 @@
   margin: 0 0 1.5rem;
 }
 
+.table-responsive {
+  margin-bottom: 20px;
+}
+
 .review-header {
   display: flex;
   justify-content: space-between;
@@ -282,13 +286,15 @@
 
 .review-table td input {
   width: 100%;
-  box-sizing: border-box;           /* ensures width:100% is exact */
+  box-sizing: border-box;
+  /* ensures width:100% is exact */
   padding: 0.35rem 0.45rem;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   font-size: 0.85rem;
   color: #334155;
-  text-align: left;                 /* default for text columns */
+  text-align: left;
+  /* default for text columns */
 }
 
 /* Right-align value inside numeric inputs */
@@ -349,4 +355,38 @@
 
 .review-wrapper {
   padding: 1rem;
+}
+
+/* Smart Summary Bar */
+.bill-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 3rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+  padding: 1.25rem 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.bill-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bill-summary-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.bill-summary-value {
+  font-size: 1.1rem;
+  color: #0f172a;
+  font-weight: 500;
 }

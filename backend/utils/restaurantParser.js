@@ -258,7 +258,7 @@ function extractGrandTotal(lines) {
 function extractDocumentNumber(lines) {
   // Patterns: Bill No, Receipt No, Invoice No, Order No, Token No, Ticket No
   const docPatterns = [
-    /(?:bill\s*no|receipt\s*no|invoice\s*no|order\s*no|token\s*no|ticket\s*no|txn\s*no|trans\s*no|ref\s*no|order\s*id|receipt\s*#|bill\s*#)\s*[:#]?\s*([A-Z0-9\-/]+)/i,
+    /(?:bill\s*no|receipt\s*no|invoice\s*no|order\s*no|token\s*no|ticket\s*no|txn\s*no|trans\s*no|ref\s*no|order\s*id|receipt\s*#|bill\s*#)\.?\s*[:#]?\s*([A-Z0-9\-/]+)/i,
     /(?:no\.?|#)\s*([A-Z0-9\-/]{3,15})\s*$/i,
   ];
   for (const line of lines) {
@@ -274,24 +274,38 @@ function extractDocumentNumber(lines) {
 
 // ── NEW: extract bill date ────────────────────────────────────────
 function extractBillDate(lines) {
-  // Try to find a date keyword line first
-  const dateKeywordPattern = /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*[:#]?\s*([0-9]{1,2}[\-/\.][0-9]{1,2}[\-/\.][0-9]{2,4})/i;
-  const isoPattern = /\b(\d{4}-\d{2}-\d{2})\b/;
-  const dmyPattern = /\b(\d{1,2}[\-/.](\d{1,2})[\-/.]\d{2,4})\b/;
+
+  const patterns = [
+
+    // Date: Jun 12, 2026 11:32
+    /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*:?\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/i,
+
+    // Date: June 12, 2026
+    /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*:?\s*([A-Za-z]+\s+\d{1,2},\s+\d{4})/i,
+
+    // Date: 12 Jun 2026
+    /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*:?\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})/i,
+
+    // Date: 12-June-2026
+    /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*:?\s*(\d{1,2}[-\/.][A-Za-z]{3,9}[-\/.]\d{2,4})/i,
+
+    // Date: 12/06/2026
+    /(?:date|dated|bill\s*date|invoice\s*date|order\s*date)\s*:?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4})/i,
+
+    // ISO: 2026-06-12
+    /(\d{4}[\/.-]\d{2}[\/.-]\d{2})/
+  ];
 
   for (const line of lines) {
-    // Prefer lines explicitly labeled as date
-    const kwMatch = line.match(dateKeywordPattern);
-    if (kwMatch) return normaliseDate(kwMatch[1]);
+    for (const pattern of patterns) {
+      const match = line.match(pattern);
+      if (match) {
+        return match[1].trim();
+      }
+    }
   }
-  // Fallback: scan first 20 lines for any recognisable date
-  for (const line of lines.slice(0, 20)) {
-    const isoMatch = line.match(isoPattern);
-    if (isoMatch) return isoMatch[1];
-    const dmyMatch = line.match(dmyPattern);
-    if (dmyMatch) return normaliseDate(dmyMatch[1]);
-  }
-  return '';
+
+  return "";
 }
 
 function normaliseDate(str) {
@@ -391,7 +405,7 @@ const parseBillRegex = (ocrText) => {
     if ((line.match(/,/g) || []).length >= 2) return false;
     return true;
   });
-  
+
   let restaurantName = findRestaurantName(originalLines);
 
   function findRestaurantName(sourceLines) {
@@ -401,7 +415,7 @@ const parseBillRegex = (ocrText) => {
       if (line.length < 4) continue;
       // Ignore lines containing many numbers
       if ((line.match(/\d/g) || []).length > 2) continue;
-      
+
       const cleaned = cleanRestaurantName(line);
       if (cleaned.length >= 4) {
         return cleaned;
@@ -409,7 +423,7 @@ const parseBillRegex = (ocrText) => {
     }
     return sourceLines[0] || "Unknown Restaurant";
   }
-  
+
   const items = [];
   const format = detectColumnFormat(lines);
   const { sgst, cgst } = extractGST(lines);
@@ -445,7 +459,9 @@ const parseBillRegex = (ocrText) => {
     }
 
     // Tolerate lines with at least 1 number or just text if we can find a valid item name
-    if (nums.length >= 1) {
+    const decimalValues = line.match(/\d+\.\d{2}/g);
+
+    if (nums.length >= 1 && decimalValues && decimalValues.length >= 2) {
       // Reconstruct name
       let nameTokens = line.split(/\s+/);
       let nameParts = [];
