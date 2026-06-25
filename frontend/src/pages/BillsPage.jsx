@@ -32,7 +32,7 @@ const BillsPage = ({ bills, billsLoading, billsError, handleDelete, openUploadMo
         </div>
         <div className="module-actions">
           <button className="btn-primary" onClick={openUploadModal}>
-            <span className="btn-icon">➕</span> Import Bill
+            Import Bill
           </button>
         </div>
       </div>
@@ -42,9 +42,9 @@ const BillsPage = ({ bills, billsLoading, billsError, handleDelete, openUploadMo
       <div className="list-controls">
         <div className="search-box">
           <span className="search-icon">🔍</span>
-          <input 
-            type="text" 
-            placeholder="Search by vendor, document number, or type..." 
+          <input
+            type="text"
+            placeholder="Search by vendor, document number, or type..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -73,7 +73,7 @@ const BillsPage = ({ bills, billsLoading, billsError, handleDelete, openUploadMo
             <table className="bill-table">
               <thead>
                 <tr>
-                  <th>Type</th>
+
                   <th>Document Number</th>
                   <th>Date</th>
                   <th>Vendor Name</th>
@@ -87,11 +87,7 @@ const BillsPage = ({ bills, billsLoading, billsError, handleDelete, openUploadMo
               <tbody>
                 {filteredBills.map((bill) => (
                   <tr key={bill.id} onClick={() => navigate(`/bills/${bill.id}`)}>
-                    <td>
-                      <span className={`status-badge type-${(bill.bill_type || 'unknown').toLowerCase()}`}>
-                        {(bill.bill_type || 'Unknown').toUpperCase()}
-                      </span>
-                    </td>
+
                     <td className="fw-500">{bill.document_number || '-'}</td>
                     <td>{bill.bill_date ? new Date(bill.bill_date).toLocaleDateString() : '-'}</td>
                     <td>{bill.vendor_name || '-'}</td>
@@ -104,8 +100,8 @@ const BillsPage = ({ bills, billsLoading, billsError, handleDelete, openUploadMo
                     </td>
                     <td>{new Date(bill.created_at).toLocaleDateString()}</td>
                     <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        className="btn-icon-danger" 
+                      <button
+                        className="btn-icon-danger"
                         onClick={() => handleDelete(bill.id)}
                         title="Delete Bill"
                       >

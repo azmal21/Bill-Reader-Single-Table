@@ -27,15 +27,14 @@ const isColumnEmpty = (items, field) => {
 
 // Column definitions for the line-items table (read-only view)
 const ALL_COLUMNS = [
-  { key: 'item_code',       label: 'Item Code',   numeric: false },
-  { key: 'item_name',       label: 'Item Name',   numeric: false },
-  { key: 'quantity',        label: 'Qty',         numeric: true  },
-  { key: 'unit_price',      label: 'Unit Price',  numeric: true  },
-  { key: 'discount_amount', label: 'Discount',    numeric: true  },
-  { key: 'tax_percent',     label: 'Tax %',       numeric: true  },
-  { key: 'tax_amount',      label: 'Tax Amount',  numeric: true  },
-  { key: 'line_total',      label: 'Line Total',  numeric: true  },
-  { key: 'status',          label: 'Status',      numeric: false },
+  { key: 'item_code', label: 'Item Code', numeric: false },
+  { key: 'item_name', label: 'Item Name', numeric: false },
+  { key: 'quantity', label: 'Qty', numeric: true },
+  { key: 'unit_price', label: 'Unit Price', numeric: true },
+  { key: 'discount_amount', label: 'Discount', numeric: true },
+  { key: 'tax_percent', label: 'Tax %', numeric: true },
+  { key: 'tax_amount', label: 'Tax Amount', numeric: true },
+  { key: 'line_total', label: 'Line Total', numeric: true },
 ];
 
 const renderCellValue = (key, value) => {
@@ -52,12 +51,12 @@ const renderCellValue = (key, value) => {
 
 // ── Component ──────────────────────────────────────────────────────────────
 const BillDetailsPage = ({ handleDelete }) => {
-  const { id }    = useParams();
-  const navigate  = useNavigate();
-  const [bill,    setBill]    = useState(null);
-  const [items,   setItems]   = useState([]);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [bill, setBill] = useState(null);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -92,8 +91,8 @@ const BillDetailsPage = ({ handleDelete }) => {
       <div className="spinner" /><p>Loading Bill Details...</p>
     </div>
   );
-  if (error)  return <div className="error-message">{error}</div>;
-  if (!bill)  return <div className="error-message">Bill not found.</div>;
+  if (error) return <div className="error-message">{error}</div>;
+  if (!bill) return <div className="error-message">Bill not found.</div>;
 
   const sgst = parseFloat(bill.sgst ?? 0);
   const cgst = parseFloat(bill.cgst ?? 0);
@@ -134,30 +133,6 @@ const BillDetailsPage = ({ handleDelete }) => {
                 : '—'}
             </span>
             <span><strong>Vendor:</strong> {bill.vendor_name || '—'}</span>
-            <span>
-              <strong>Grand Total:</strong>{' '}
-              <span style={{ color: '#059669', fontWeight: 700 }}>
-                {formatCurrency(bill.grand_total)}
-              </span>
-            </span>
-            <span>
-              <strong>Type:</strong>{' '}
-              <span style={{ textTransform: 'capitalize' }}>{bill.bill_type || '—'}</span>
-            </span>
-
-            {/* SGST / CGST — only when non-zero */}
-            {sgst > 0 && (
-              <span>
-                <strong>SGST:</strong>{' '}
-                <span style={{ color: '#7c3aed', fontWeight: 600 }}>₹{sgst.toFixed(2)}</span>
-              </span>
-            )}
-            {cgst > 0 && (
-              <span>
-                <strong>CGST:</strong>{' '}
-                <span style={{ color: '#7c3aed', fontWeight: 600 }}>₹{cgst.toFixed(2)}</span>
-              </span>
-            )}
           </div>
 
           {/* ── Line items table ── */}
@@ -190,6 +165,28 @@ const BillDetailsPage = ({ handleDelete }) => {
                   ))}
                 </tbody>
               </table>
+
+              <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', fontSize: '1.05rem', paddingRight: '1rem' }}>
+                {sgst > 0 && (
+                  <div>
+                    <strong>SGST:</strong>{' '}
+                    <span style={{ color: '#7c3aed', fontWeight: 600, display: 'inline-block', width: '6rem', textAlign: 'right' }}>₹{sgst.toFixed(2)}</span>
+                  </div>
+                )}
+                {cgst > 0 && (
+                  <div>
+                    <strong>CGST:</strong>{' '}
+                    <span style={{ color: '#7c3aed', fontWeight: 600, display: 'inline-block', width: '6rem', textAlign: 'right' }}>₹{cgst.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                  <strong>Grand Total:</strong>{' '}
+                  <span style={{ color: '#059669', fontWeight: 700, fontSize: '1.2rem', display: 'inline-block', width: '8rem', textAlign: 'right' }}>
+                    {formatCurrency(bill.grand_total)}
+                  </span>
+                </div>
+              </div>
+
             </div>
           ) : (
             <p className="no-items-msg">No line items were extracted for this bill.</p>

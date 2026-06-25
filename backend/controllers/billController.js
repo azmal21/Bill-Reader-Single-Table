@@ -100,7 +100,7 @@ const extractBill = async (req, res) => {
       unifiedBill.bill_date = parsed.invoiceDate || '';
       unifiedBill.vendor_name = parsed.sellerName || '';
       unifiedBill.grand_total = parsed.grandTotal || 0;
-      
+
       unifiedItems = (parsed.items || []).map(item => ({
         item_code: item.hsnCode || '',
         item_name: item.itemDescription || '',
@@ -134,19 +134,6 @@ const extractBill = async (req, res) => {
 
     const extractionTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
-    // ===== DEBUG: Log all extracted data =====
-    console.log('\n========== EXTRACTION RESULTS ==========');
-    console.log('📄 Bill Type:', billType);
-    console.log('⏱️  Extraction Time:', extractionTime + 's');
-    console.log('\n--- RAW OCR TEXT (Plain) ---');
-    console.log(rawText);
-    console.log('\n--- PARSED BILL DATA (JSON) ---');
-    console.log(JSON.stringify(unifiedBill, null, 2));
-    console.log('\n--- PARSED ITEMS (JSON) ---');
-    console.log(JSON.stringify(unifiedItems, null, 2));
-    console.log('=========================================\n');
-    // ===== END DEBUG =====
-
     return res.status(200).json({
       success: true,
       billData: unifiedBill,
@@ -160,8 +147,8 @@ const extractBill = async (req, res) => {
     const userMessage = stage === 'preprocess'
       ? 'Image could not be processed. Please upload a valid JPG, PNG, WEBP, or PDF file.'
       : stage === 'ocr'
-      ? 'OCR failed to read the document. Try a clearer image.'
-      : 'Failed to extract bill data.';
+        ? 'OCR failed to read the document. Try a clearer image.'
+        : 'Failed to extract bill data.';
     return res.status(500).json({ success: false, error: userMessage, details: error.message, stage });
   } finally {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -172,10 +159,10 @@ const extractBill = async (req, res) => {
 const saveBill = async (req, res) => {
   try {
     const { billData, items } = req.body;
-    
+
     // Provide defaults for db
     if (!billData.grand_total) billData.grand_total = 0;
-    
+
     const saved = await billService.saveBill(billData, items);
     return res.status(200).json({ success: true, ...saved });
   } catch (error) {

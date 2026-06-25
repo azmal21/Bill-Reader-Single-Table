@@ -95,12 +95,12 @@ async function processQueue() {
   let completed = false;
   let timeoutId = null;
 
-  // 60-second Timeout Protection
+  // 120-second Timeout Protection
   timeoutId = setTimeout(async () => {
     if (completed) return;
     completed = true;
 
-    console.error(`[TIMEOUT] OCR job exceeded 60s timeout limit for image: ${job.imagePath}`);
+    console.error(`[TIMEOUT] OCR job exceeded 120s timeout limit for image: ${job.imagePath}`);
     console.log(`[TIMEOUT] Current active OCR jobs before recovery: ${activeOCRJobs}`);
 
     // Decrement active counter and set worker active status to false
@@ -127,9 +127,9 @@ async function processQueue() {
       console.error(`[RECOVERY] Failed to recreate Worker #${workerObj.id}:`, err.message);
     }
 
-    job.reject(new Error("OCR request timed out after 60 seconds."));
+    job.reject(new Error("OCR request timed out after 120 seconds."));
     processQueue(); // Process the next job in queue
-  }, 60000);
+  }, 120000);
 
   try {
     console.log("OCR START:", job.imagePath);
